@@ -1405,6 +1405,7 @@ version = "0.1.0"
 dependencies = [
  "dirs",
  "iced",
+ "rand",
  "serde",
  "serde_yaml",
  "shellexpand",
