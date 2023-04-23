@@ -179,11 +179,26 @@ impl Application for MyApplication {
             Mode::UseQuestions(use_questions_state) => {
                 let mut column = Column::new();
                 column = column.push(Text::new(use_questions_state.current_question().text));
+
+                let mut options_for_select = use_questions_state.current_question().options_for_select.to_vec();
+
+                let mut shuffled_options = vec![];
+                let mut current_option_for_select = random_remove_from(&mut options_for_select);
+                while current_option_for_select.is_some() {
+                    shuffled_options.push(current_option_for_select.unwrap());
+                    current_option_for_select = random_remove_from(&mut options_for_select);
+                }
+
+                for opt in shuffled_options.iter() {
+                    column = column.push(Text::new(opt.clone().text));
+                }
+
+
                 let mut prev_button = button("Prev");
                 if !use_questions_state.is_first_page() {
                     prev_button = prev_button.on_press(Message::OpenPage(use_questions_state.prev_page()));
                 }
-                let mut next_button = button("Nrev");
+                let mut next_button = button("Next");
                 if !use_questions_state.is_last_page() {
                     next_button = next_button.on_press(Message::OpenPage(use_questions_state.next_page()))
                 }
