@@ -160,14 +160,8 @@ impl Application for MyApplication {
                 file.read_to_string(&mut before_serialize);
 
                 let mut questions: Vec<Question> = serde_yaml::from_str(before_serialize.as_str()).unwrap();
-                let mut next_question: Option<Question> = random_remove_from(&mut questions);
-                let mut shuffled_questions: Vec<Question> = vec![];
+                let mut shuffled_questions: Vec<Question> = shuffle(questions);
                 let mut column = Column::new();
-                while next_question.is_some() {
-                    shuffled_questions.push(next_question.unwrap());
-                    //column = column.push(Text::new(next_question.unwrap().text));
-                    next_question = random_remove_from(&mut questions);
-                }
                 column = column.push(button("Use questions").on_press(Message::QuestionsShuffled(
                     UseQuestionsState {
                         questions: shuffled_questions,
@@ -182,12 +176,7 @@ impl Application for MyApplication {
 
                 let mut options_for_select = use_questions_state.current_question().options_for_select.to_vec();
 
-                let mut shuffled_options = vec![];
-                let mut current_option_for_select = random_remove_from(&mut options_for_select);
-                while current_option_for_select.is_some() {
-                    shuffled_options.push(current_option_for_select.unwrap());
-                    current_option_for_select = random_remove_from(&mut options_for_select);
-                }
+                let mut shuffled_options = shuffle(options_for_select);
 
                 for opt in shuffled_options.iter() {
                     column = column.push(Text::new(opt.clone().text));
@@ -233,6 +222,17 @@ fn random_remove_from<T>(from: &mut Vec<T>) -> Option<T> {
         let random_number = rng.gen_range(0..(from.len()));
         Some(from.remove(random_number))
     }
+}
+
+fn shuffle<T: std::clone::Clone>(origin: Vec<T>) -> Vec<T> {
+    let mut copy = origin.to_vec();
+    let mut shuffled = vec![];
+    let mut current = random_remove_from(&mut copy);
+    while current.is_some() {
+        shuffled.push(current.unwrap());
+        current = random_remove_from(&mut copy);
+    }
+    shuffled
 }
 
 
