@@ -18,7 +18,42 @@ use iced::{
 enum Mode {
     Initial,
     FindFile,
-    UseFile(String),
+    LoadingFile(String),
+    UseQuestions(UseQuestionsState),
+}
+
+#[derive(Debug, Clone)]
+struct UseQuestionsState {
+    questions: Vec<Question>,
+    current_page: usize,
+}
+
+impl UseQuestionsState {
+    fn current_question(&self) -> Question {
+        self.questions[self.current_page].clone()
+    }
+
+    fn is_first_page(&self) -> bool {
+        self.current_page == 0
+    }
+
+    fn is_last_page(&self) -> bool {
+        self.current_page == self.questions.len() - 1
+    }
+
+    fn next_page(&self) -> UseQuestionsState {
+        UseQuestionsState {
+            questions: self.questions.to_vec(),
+            current_page: self.current_page + 1,
+        }
+    }
+
+    fn prev_page(&self) -> UseQuestionsState {
+        UseQuestionsState {
+            questions: self.questions.to_vec(),
+            current_page: self.current_page - 1,
+        }
+    }
 }
 
 impl Default for Mode {
@@ -34,6 +69,8 @@ struct MyApplication {
 enum Message {
     FindButtonClicked,
     FileSelected(String),
+    QuestionsShuffled(UseQuestionsState),
+    OpenPage(UseQuestionsState),
 }
 
 impl Application for MyApplication {
@@ -57,7 +94,15 @@ impl Application for MyApplication {
                 Command::none()
             },
             Message::FileSelected(file_name) => {
-                self.mode = Mode::UseFile(file_name);
+                self.mode = Mode::LoadingFile(file_name);
+                Command::none()
+            },
+            Message::QuestionsShuffled(use_questions_state) => {
+                self.mode = Mode::UseQuestions(use_questions_state);
+                Command::none()
+            },
+            Message::OpenPage(use_questions_state) => {
+                self.mode = Mode::UseQuestions(use_questions_state);
                 Command::none()
             }
         }
@@ -88,7 +133,7 @@ impl Application for MyApplication {
                 }
                 col.into()
             },
-            Mode::UseFile(file_name) => {
+            Mode::LoadingFile(file_name) => {
                 //let mut questions = vec![
                 //    Question {
                 //        text: "Sample question 1".to_string(),
@@ -116,13 +161,35 @@ impl Application for MyApplication {
 
                 let mut questions: Vec<Question> = serde_yaml::from_str(before_serialize.as_str()).unwrap();
                 let mut next_question: Option<Question> = random_remove_from(&mut questions);
+                let mut shuffled_questions: Vec<Question> = vec![];
                 let mut column = Column::new();
                 while next_question.is_some() {
-                    column = column.push(Text::new(next_question.unwrap().text));
+                    shuffled_questions.push(next_question.unwrap());
+                    //column = column.push(Text::new(next_question.unwrap().text));
                     next_question = random_remove_from(&mut questions);
                 }
+                column = column.push(button("Use questions").on_press(Message::QuestionsShuffled(
+                    UseQuestionsState {
+                        questions: shuffled_questions,
+                        current_page: 0,
+                    }
+                            )));
                 column.into()
             },
+            Mode::UseQuestions(use_questions_state) => {
+                let mut column = Column::new();
+                column = column.push(Text::new(use_questions_state.current_question().text));
+                let mut prev_button = button("Prev");
+                if !use_questions_state.is_first_page() {
+                    prev_button = prev_button.on_press(Message::OpenPage(use_questions_state.prev_page()));
+                }
+                let mut next_button = button("Nrev");
+                if !use_questions_state.is_last_page() {
+                    next_button = next_button.on_press(Message::OpenPage(use_questions_state.next_page()))
+                }
+                column = column.push(prev_button).push(next_button);
+                column.into()
+            }
         }
     }
 }
