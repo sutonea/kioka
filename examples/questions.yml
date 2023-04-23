@@ -1,0 +1,12 @@
+- text: Sample question 1
+  options_for_select:
+  - text: A
+    truthy: true
+  - text: B
+    truthy: false
+- text: Sample question 2
+  options_for_select:
+  - text: X
+    truthy: true
+  - text: Y
+    truthy: false
