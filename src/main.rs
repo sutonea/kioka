@@ -1,11 +1,11 @@
 extern crate rand;
 use serde::{Serialize, Deserialize};
 use std::fs::File;
-use std::io::Write;
+
 use std::io::prelude::*;
 
 use rand::Rng;
-use dirs::home_dir;
+
 use iced::executor;
 use iced::widget::{button, checkbox, Column, Text};
 use std::path::{Path, PathBuf};
@@ -106,7 +106,7 @@ impl Application for MyApplication {
                 self.mode = Mode::UseQuestions(use_questions_state);
                 Command::none()
             },
-            Message::Toggled(checked) => {
+            Message::Toggled(_checked) => {
                 Command::none()
             },
 
@@ -168,14 +168,14 @@ impl Application for MyApplication {
                 //file.write_all(out_str.as_bytes()).unwrap();
 
                 let file_path = format!("{}", shellexpand::tilde(file_name));
-                let mut file = File::open(file_path).unwrap();
+                let file = File::open(file_path).unwrap();
 
                 
                 //let mut questions: Vec<Question> = 
                 //    serde_yaml::from_str(before_serialize.as_str()).unwrap();
 
-                let mut questions: Vec<Question> = QuestionsCreator::create_from_file(file);
-                let mut shuffled_questions: Vec<Question> = shuffle(questions);
+                let questions: Vec<Question> = QuestionsCreator::create_from_file(file);
+                let shuffled_questions: Vec<Question> = shuffle(questions);
                 let mut column = Column::new();
                 column = column.push(button("Use questions")
                                .on_press(Message::QuestionsShuffled(
@@ -192,12 +192,12 @@ impl Application for MyApplication {
                     Text::new(use_questions_state.current_question().text)
                     );
 
-                let mut options_for_select = 
+                let options_for_select = 
                     use_questions_state
                         .current_question()
                             .options_for_select.to_vec();
 
-                let mut shuffled_options = shuffle(options_for_select);
+                let shuffled_options = shuffle(options_for_select);
 
                 for opt in shuffled_options.iter() {
                     column = column.push(
