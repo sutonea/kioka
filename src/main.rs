@@ -7,7 +7,7 @@ use std::io::prelude::*;
 use rand::Rng;
 use dirs::home_dir;
 use iced::executor;
-use iced::widget::{button, Column, Text};
+use iced::widget::{button, checkbox, Column, Text};
 use std::path::{Path, PathBuf};
 use iced::{
     Application, Command, Element, Settings, Theme,
@@ -71,6 +71,7 @@ enum Message {
     FileSelected(String),
     QuestionsShuffled(UseQuestionsState),
     OpenPage(UseQuestionsState),
+    Toggled(bool)
 }
 
 impl Application for MyApplication {
@@ -104,7 +105,11 @@ impl Application for MyApplication {
             Message::OpenPage(use_questions_state) => {
                 self.mode = Mode::UseQuestions(use_questions_state);
                 Command::none()
-            }
+            },
+            Message::Toggled(checked) => {
+                Command::none()
+            },
+
         }
     }
 
@@ -179,7 +184,7 @@ impl Application for MyApplication {
                 let mut shuffled_options = shuffle(options_for_select);
 
                 for opt in shuffled_options.iter() {
-                    column = column.push(Text::new(opt.clone().text));
+                    column = column.push(checkbox(opt.clone().text, false, Message::Toggled));
                 }
 
 
