@@ -175,12 +175,12 @@ impl Application for MyApplication {
                 //    serde_yaml::from_str(before_serialize.as_str()).unwrap();
 
                 let questions: Vec<Question> = QuestionsCreator::create_from_file(file);
-                let shuffled_questions: Vec<Question> = shuffle(questions);
+                //let shuffled_questions: Vec<Question> = shuffle(questions);
                 let mut column = Column::new();
                 column = column.push(button("Use questions")
                                .on_press(Message::QuestionsShuffled(
                     UseQuestionsState {
-                        questions: shuffled_questions,
+                        questions: questions,
                         current_page: 0,
                     }
                             )));
@@ -192,14 +192,14 @@ impl Application for MyApplication {
                     Text::new(use_questions_state.current_question().text)
                     );
 
-                let options_for_select = 
-                    use_questions_state
-                        .current_question()
-                            .options_for_select.to_vec();
+                //let options_for_select = 
+                //    use_questions_state
+                //        .current_question()
+                //            .options_for_select.to_vec();
 
-                let shuffled_options = shuffle(options_for_select);
+                //let shuffled_options = shuffle(options_for_select);
 
-                for opt in shuffled_options.iter() {
+                for opt in use_questions_state.current_question().options_for_select.iter() {
                     column = column.push(
                         checkbox(opt.clone().text, false, Message::Toggled)
                         );
@@ -239,7 +239,12 @@ impl QuestionsCreator {
     fn create_from_file(mut file: File) -> Vec<Question> {
         let mut before_serialize = String::new();
         file.read_to_string(&mut before_serialize);
-        serde_yaml::from_str(before_serialize.as_str()).unwrap()
+        let mut loaded_questions: Vec<Question> =
+            serde_yaml::from_str(before_serialize.as_str()).unwrap();
+        for question in loaded_questions.iter_mut() {
+            question.shuffle_options();
+        }
+        shuffle(loaded_questions.to_vec())
     }
 }
 
@@ -247,6 +252,12 @@ impl QuestionsCreator {
 struct Question {
     text: String,
     options_for_select: Vec<OptionForSelect>,
+}
+
+impl Question {
+    fn shuffle_options(&mut self) {
+        self.options_for_select = shuffle(self.options_for_select.to_vec());
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
