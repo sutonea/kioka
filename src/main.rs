@@ -122,16 +122,24 @@ impl Application for MyApplication {
             },
             Mode::FindFile => {
 
-                let path_to_dir: PathBuf = Path::new(format!("{}", shellexpand::tilde("~/Documents/kioka")).as_str()).to_path_buf();
+                let path_to_dir: PathBuf = Path::new(
+                    format!("{}", shellexpand::tilde("~/Documents/kioka")).as_str()
+                    ).to_path_buf();
                 //let path = path_to_dir.as_path();
                 //let p: Option<&Path> = Some(&path);
                 //self.current_file_path = Box::new(p);
                 let mut col = Column::new();
-                col = col.push(Text::new(path_to_dir.as_path().to_string_lossy().to_string()));
+                col = col.push(
+                    Text::new(path_to_dir.as_path().to_string_lossy().to_string())
+                    );
                 for entry in path_to_dir.read_dir().expect("read_dir call failed") {
                     if let Ok(entry) = entry {
-                        let button = button(Text::new(entry.path().as_path().to_string_lossy().to_string() ) )
-                            .on_press(Message::FileSelected( entry.path().as_path().to_string_lossy().to_string()  ));
+                        let button = button(Text::new(
+                                entry.path().as_path().to_string_lossy().to_string() 
+                                                      ) )
+                            .on_press(Message::FileSelected(
+                                    entry.path().as_path().to_string_lossy().to_string()  
+                                                             ));
                         col = col.push(button);
 
                     }
@@ -161,13 +169,16 @@ impl Application for MyApplication {
 
                 let file_path = format!("{}", shellexpand::tilde(file_name));
                 let mut file = File::open(file_path).unwrap();
-                let mut before_serialize = String::new();
-                file.read_to_string(&mut before_serialize);
 
-                let mut questions: Vec<Question> = serde_yaml::from_str(before_serialize.as_str()).unwrap();
+                
+                //let mut questions: Vec<Question> = 
+                //    serde_yaml::from_str(before_serialize.as_str()).unwrap();
+
+                let mut questions: Vec<Question> = QuestionsCreator::create_from_file(file);
                 let mut shuffled_questions: Vec<Question> = shuffle(questions);
                 let mut column = Column::new();
-                column = column.push(button("Use questions").on_press(Message::QuestionsShuffled(
+                column = column.push(button("Use questions")
+                               .on_press(Message::QuestionsShuffled(
                     UseQuestionsState {
                         questions: shuffled_questions,
                         current_page: 0,
@@ -177,24 +188,41 @@ impl Application for MyApplication {
             },
             Mode::UseQuestions(use_questions_state) => {
                 let mut column = Column::new();
-                column = column.push(Text::new(use_questions_state.current_question().text));
+                column = column.push(
+                    Text::new(use_questions_state.current_question().text)
+                    );
 
-                let mut options_for_select = use_questions_state.current_question().options_for_select.to_vec();
+                let mut options_for_select = 
+                    use_questions_state
+                        .current_question()
+                            .options_for_select.to_vec();
 
                 let mut shuffled_options = shuffle(options_for_select);
 
                 for opt in shuffled_options.iter() {
-                    column = column.push(checkbox(opt.clone().text, false, Message::Toggled));
+                    column = column.push(
+                        checkbox(opt.clone().text, false, Message::Toggled)
+                        );
                 }
 
 
                 let mut prev_button = button("Prev");
                 if !use_questions_state.is_first_page() {
-                    prev_button = prev_button.on_press(Message::OpenPage(use_questions_state.prev_page()));
+                    prev_button = 
+                        prev_button.on_press(
+                            Message::OpenPage(
+                                use_questions_state.prev_page()
+                                )
+                            );
                 }
                 let mut next_button = button("Next");
                 if !use_questions_state.is_last_page() {
-                    next_button = next_button.on_press(Message::OpenPage(use_questions_state.next_page()))
+                    next_button = 
+                        next_button.on_press(
+                            Message::OpenPage(
+                                use_questions_state.next_page()
+                                )
+                            )
                 }
                 column = column.push(prev_button).push(next_button);
                 column.into()
@@ -203,6 +231,17 @@ impl Application for MyApplication {
     }
 }
 
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct QuestionsCreator {}
+
+impl QuestionsCreator {
+    fn create_from_file(mut file: File) -> Vec<Question> {
+        let mut before_serialize = String::new();
+        file.read_to_string(&mut before_serialize);
+        serde_yaml::from_str(before_serialize.as_str()).unwrap()
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Question {
