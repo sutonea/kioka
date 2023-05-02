@@ -7,7 +7,7 @@ use std::io::prelude::*;
 use rand::Rng;
 
 use iced::executor;
-use iced::widget::{button, checkbox, Column, Text};
+use iced::widget::{button, checkbox, column, Column, Text, row};
 use std::path::{Path, PathBuf};
 use iced::{
     Application, Command, Element, Settings, Theme,
@@ -19,18 +19,18 @@ enum Mode {
     Initial,
     FindFile,
     LoadingFile(String),
-    UseQuestions(UseQuestionsState),
+    UseQuestions,
 }
 
 #[derive(Debug, Clone)]
 struct UseQuestionsState {
-    questions: Vec<Question>,
+    questions: Vec<CheckableQuestion>,
     current_page: usize,
 }
 
 impl UseQuestionsState {
-    fn current_question(&self) -> Question {
-        self.questions[self.current_page].clone()
+    fn current_question(&self) -> &CheckableQuestion {
+        &(self.questions[self.current_page])
     }
 
     fn is_first_page(&self) -> bool {
@@ -63,6 +63,32 @@ impl Default for Mode {
 #[derive(Default)]
 struct MyApplication {
     mode: Mode,
+    checkable_questions: Vec<CheckableQuestion>,
+    num_current_page: usize,
+}
+
+impl MyApplication {
+    fn current_question(&self) -> &CheckableQuestion {
+        &(self.checkable_questions[self.num_current_page])
+    }
+
+    fn is_last_page(&self) -> bool {
+        self.num_current_page == self.checkable_questions.len() - 1
+    }
+
+    fn is_first_page(&self) -> bool {
+        self.num_current_page == 0
+    }
+
+    fn next_page(&mut self) {
+        self.num_current_page += 1;
+    }
+
+    fn prev_page(&mut self) {
+        self.num_current_page -= 1;
+    }
+
+
 }
 
 #[derive(Debug, Clone)]
@@ -70,8 +96,11 @@ enum Message {
     FindButtonClicked,
     FileSelected(String),
     QuestionsShuffled(UseQuestionsState),
-    OpenPage(UseQuestionsState),
-    Toggled(bool)
+    OpenPage,
+    NextPage,
+    PrevPage,
+    Toggled(bool),
+    OptionMessage(usize, OptionMessage)
 }
 
 impl Application for MyApplication {
@@ -95,20 +124,39 @@ impl Application for MyApplication {
                 Command::none()
             },
             Message::FileSelected(file_name) => {
-                self.mode = Mode::LoadingFile(file_name);
+                self.mode = Mode::LoadingFile(file_name.clone());
+                let file = File::open(file_name.clone()).unwrap();
+                let questions: Vec<Question> = QuestionsCreator::create_from_file(file);
+                self.checkable_questions = CheckableQuestionsCreator::from_questions(questions);
                 Command::none()
             },
             Message::QuestionsShuffled(use_questions_state) => {
-                self.mode = Mode::UseQuestions(use_questions_state);
+                self.mode = Mode::UseQuestions;
+                self.checkable_questions = use_questions_state.questions;
                 Command::none()
             },
-            Message::OpenPage(use_questions_state) => {
-                self.mode = Mode::UseQuestions(use_questions_state);
+            Message::OpenPage => {
+                self.mode = Mode::UseQuestions;
+                Command::none()
+            },
+            Message::NextPage => {
+                dbg!("NextPage");
+                self.next_page();
+                Command::none()
+            },
+            Message::PrevPage => {
+                dbg!("PrevPage");
+                self.prev_page();
                 Command::none()
             },
             Message::Toggled(_checked) => {
+                dbg!("Toggled");
                 Command::none()
             },
+            Message::OptionMessage(i, checked) => {
+                dbg!("OptionMessage {}", i);
+                Command::none()
+            }
 
         }
     }
@@ -174,58 +222,52 @@ impl Application for MyApplication {
                 //let mut questions: Vec<Question> = 
                 //    serde_yaml::from_str(before_serialize.as_str()).unwrap();
 
-                let questions: Vec<Question> = QuestionsCreator::create_from_file(file);
-                //let shuffled_questions: Vec<Question> = shuffle(questions);
                 let mut column = Column::new();
                 column = column.push(button("Use questions")
                                .on_press(Message::QuestionsShuffled(
                     UseQuestionsState {
-                        questions: questions,
+                        questions: self.checkable_questions.clone(),
                         current_page: 0,
                     }
                             )));
                 column.into()
             },
-            Mode::UseQuestions(use_questions_state) => {
-                let mut column = Column::new();
-                column = column.push(
-                    Text::new(use_questions_state.current_question().text)
+            Mode::UseQuestions => {
+                let mut col = Column::new();
+                col = col.push(
+                    Text::new(self.current_question().text.as_str())
                     );
 
-                //let options_for_select = 
-                //    use_questions_state
-                //        .current_question()
-                //            .options_for_select.to_vec();
 
-                //let shuffled_options = shuffle(options_for_select);
+                col = col.push(column(
+                self.current_question().options_for_select
+                    .iter()
+                    .enumerate()
+                    .map(|(i, option)| {
+                        option.view(i).map(move |message| {
+                            Message::OptionMessage(i, message)
+                        })
+                    }).collect()
 
-                for opt in use_questions_state.current_question().options_for_select.iter() {
-                    column = column.push(
-                        checkbox(opt.clone().text, false, Message::Toggled)
-                        );
-                }
-
+                    ,));
+                //for opt in opts.to_vec().iter() {
+                //    col = col.push(*opt);
+                //}
 
                 let mut prev_button = button("Prev");
-                if !use_questions_state.is_first_page() {
+                if !self.is_first_page() {
                     prev_button = 
-                        prev_button.on_press(
-                            Message::OpenPage(
-                                use_questions_state.prev_page()
-                                )
-                            );
+                        prev_button.on_press(Message::PrevPage);
                 }
+
                 let mut next_button = button("Next");
-                if !use_questions_state.is_last_page() {
+                if !self.is_last_page() {
                     next_button = 
-                        next_button.on_press(
-                            Message::OpenPage(
-                                use_questions_state.next_page()
-                                )
-                            )
+                        next_button.on_press(Message::NextPage);
                 }
-                column = column.push(prev_button).push(next_button);
-                column.into()
+
+                col = col.push(prev_button).push(next_button);
+                col.into()
             }
         }
     }
@@ -266,6 +308,72 @@ struct OptionForSelect {
     truthy: bool,
 }
 
+impl OptionForSelect {
+    fn to_checkable(&self) -> CheckableOptionForSelect {
+        CheckableOptionForSelect {
+            text: self.text.clone(),
+            truthy: self.truthy,
+            checked: false,
+        }
+
+    }
+}
+
+#[derive(Debug, Clone)]
+struct CheckableQuestion {
+    text: String,
+    options_for_select: Vec<CheckableOptionForSelect>
+}
+
+#[derive(Debug, Clone)]
+struct CheckableOptionForSelect {
+    text: String,
+    truthy: bool,
+    checked: bool,
+}
+
+#[derive(Debug, Clone)]
+enum OptionMessage {
+    Change(bool),
+}
+
+impl CheckableOptionForSelect {
+    fn update(&mut self, message: OptionMessage) {
+        match message {
+            OptionMessage::Change(checked) => {
+                dbg!("IN OptionMessage");
+                self.checked = checked;
+            }
+        }
+    }
+
+    fn view(&self, i: usize) -> Element<OptionMessage> {
+                dbg!("IN view");
+        row![checkbox(self.text.clone(), self.checked, OptionMessage::Change)].into()
+    }
+}
+
+struct CheckableQuestionsCreator {}
+
+impl CheckableQuestionsCreator {
+    fn from_questions(questions: Vec<Question>) -> Vec<CheckableQuestion> {
+        let mut return_questions: Vec<CheckableQuestion> = vec![];
+        for question in questions.iter() {
+            let mut options: Vec<CheckableOptionForSelect> = vec![];
+            for option in question.options_for_select.iter() {
+                options.push(option.to_checkable());
+            }
+            return_questions.push(
+                CheckableQuestion {
+                    text: question.text.clone(),
+                    options_for_select: options
+                }
+                );
+        }
+        return_questions
+    }
+}
+
 fn random_remove_from<T>(from: &mut Vec<T>) -> Option<T> {
     let mut rng = rand::thread_rng();
     //dbg!("dbg before");
@@ -293,5 +401,6 @@ fn shuffle<T: std::clone::Clone>(origin: Vec<T>) -> Vec<T> {
 
 
 fn main() -> iced::Result {
+    println!("TEST01");
     MyApplication::run(Settings::default())
 }
