@@ -406,5 +406,8 @@ fn shuffle<T: std::clone::Clone>(origin: Vec<T>) -> Vec<T> {
 
 fn main() -> iced::Result {
     println!("TEST01");
-    MyApplication::run(Settings::default())
+    MyApplication::run(Settings {
+        default_font: Some(include_bytes!("./fonts/ipaexgoth.ttf")),
+        ..Settings::default()
+    })
 }
