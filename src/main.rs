@@ -20,7 +20,8 @@ enum Mode {
     FindFile,
     LoadingFile(String),
     UseQuestions,
-    BeforeScoring
+    BeforeScoring,
+    AfterScoring,
 }
 
 #[derive(Debug, Clone)]
@@ -66,6 +67,8 @@ struct MyApplication {
     mode: Mode,
     checkable_questions: Vec<CheckableQuestion>,
     num_current_page: usize,
+    is_scored: bool,
+    finally_score: usize,
 }
 
 impl MyApplication {
@@ -102,7 +105,8 @@ enum Message {
     PrevPage,
     Toggled(bool),
     OptionMessage(usize, usize, OptionMessage),
-    ToBeforeScoring
+    ToBeforeScoring,
+    Scoring,
 }
 
 impl Application for MyApplication {
@@ -116,7 +120,7 @@ impl Application for MyApplication {
     }
 
     fn title(&self) -> String {
-        String::from("MyApplication")
+        String::from("KIOKA")
     }
 
     fn update(&mut self, message: Message) -> Command<Self::Message> {
@@ -164,7 +168,20 @@ impl Application for MyApplication {
             Message::ToBeforeScoring => {
                 self.mode = Mode::BeforeScoring;
                 Command::none()
-            }
+            },
+            Message::Scoring => {
+                let count_of_questions = self.checkable_questions.len();
+                let mut count_of_correct_answer = 0;
+                for question in self.checkable_questions.iter() {
+                    if question.is_correct() {
+                        count_of_correct_answer += 1;
+                    }
+                }
+                self.finally_score = count_of_correct_answer * 100 / count_of_questions;
+                self.is_scored = true;
+                self.mode = Mode::AfterScoring;
+                Command::none()
+            },
 
         }
     }
@@ -290,9 +307,15 @@ impl Application for MyApplication {
                         prev_button.on_press(Message::OpenPage);
                 }
 
-                let mut scoring_button = button("Scoring");
+                let mut scoring_button = button("Scoring").
+                    on_press(Message::Scoring);
 
                 col = col.push(prev_button).push(scoring_button);
+                col.into()
+            },
+            Mode::AfterScoring => {
+                let mut col = Column::new();
+                col = col.push(Text::new(format!("Your score: {} %", self.finally_score)));
                 col.into()
             }
         }
@@ -352,6 +375,17 @@ struct CheckableQuestion {
     options_for_select: Vec<CheckableOptionForSelect>
 }
 
+impl CheckableQuestion {
+    fn is_correct(&self) -> bool {
+        for opt in self.options_for_select.iter() {
+            if !opt.is_correct() {
+                return false
+            }
+        }
+        true
+    }
+}
+
 #[derive(Debug, Clone)]
 struct CheckableOptionForSelect {
     text: String,
@@ -377,6 +411,10 @@ impl CheckableOptionForSelect {
     fn view(&self, i: usize) -> Element<OptionMessage> {
                 dbg!("IN view");
         row![checkbox(self.text.clone(), self.checked, OptionMessage::Change)].into()
+    }
+
+    fn is_correct(&self) -> bool {
+        self.truthy == self.checked
     }
 }
 
