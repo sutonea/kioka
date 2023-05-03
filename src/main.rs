@@ -27,35 +27,6 @@ enum Mode {
 #[derive(Debug, Clone)]
 struct ListOfQuestion {
     questions: Vec<CheckableQuestion>,
-    current_page: usize,
-}
-
-impl ListOfQuestion {
-    fn current_question(&self) -> &CheckableQuestion {
-        &(self.questions[self.current_page])
-    }
-
-    fn is_first_page(&self) -> bool {
-        self.current_page == 0
-    }
-
-    fn is_last_page(&self) -> bool {
-        self.current_page == self.questions.len() - 1
-    }
-
-    fn next_page(&self) -> ListOfQuestion {
-        ListOfQuestion {
-            questions: self.questions.to_vec(),
-            current_page: self.current_page + 1,
-        }
-    }
-
-    fn prev_page(&self) -> ListOfQuestion {
-        ListOfQuestion {
-            questions: self.questions.to_vec(),
-            current_page: self.current_page - 1,
-        }
-    }
 }
 
 impl Default for Mode {
@@ -103,7 +74,6 @@ enum Message {
     OpenPage,
     NextPage,
     PrevPage,
-    Toggled(bool),
     OptionMessage(usize, usize, OptionMessage),
     ToBeforeScoring,
     Scoring,
@@ -146,23 +116,15 @@ impl Application for MyApplication {
                 Command::none()
             },
             Message::NextPage => {
-                dbg!("NextPage");
                 self.next_page();
                 Command::none()
             },
             Message::PrevPage => {
-                dbg!("PrevPage");
                 self.prev_page();
                 Command::none()
             },
-            Message::Toggled(_checked) => {
-                dbg!("Toggled");
-                Command::none()
-            },
-            Message::OptionMessage(idx_question, idx_option, checked) => {
-                dbg!("BOOL BEFORE {}", self.checkable_questions[idx_question].options_for_select[idx_option].checked);
+            Message::OptionMessage(idx_question, idx_option, _checked) => {
                 self.checkable_questions[idx_question].options_for_select[idx_option].checked ^= true;
-                dbg!("BOOL AFTER {}", self.checkable_questions[idx_question].options_for_select[idx_option].checked);
                 Command::none()
             },
             Message::ToBeforeScoring => {
@@ -198,9 +160,6 @@ impl Application for MyApplication {
                 let path_to_dir: PathBuf = Path::new(
                     format!("{}", shellexpand::tilde("~/Documents/kioka")).as_str()
                     ).to_path_buf();
-                //let path = path_to_dir.as_path();
-                //let p: Option<&Path> = Some(&path);
-                //self.current_file_path = Box::new(p);
                 let mut col = Column::new();
                 col = col.push(
                     Text::new(path_to_dir.as_path().to_string_lossy().to_string())
@@ -220,39 +179,13 @@ impl Application for MyApplication {
                 col.into()
             },
             Mode::LoadingFile(file_name) => {
-                //let mut questions = vec![
-                //    Question {
-                //        text: "Sample question 1".to_string(),
-                //        options_for_select: vec![
-                //            OptionForSelect { text: "A".to_string(), truthy: true },
-                //            OptionForSelect { text: "B".to_string(), truthy: false },
-                //        ]
-                //    },
-                //    Question {
-                //        text: "Sample question 2".to_string(),
-                //        options_for_select: vec![
-                //            OptionForSelect { text: "X".to_string(), truthy: true },
-                //            OptionForSelect { text: "Y".to_string(), truthy: false },
-                //        ]
-                //    },
-                //];
-                //let out_str = serde_yaml::to_string(&questions).unwrap();
-                //let mut file = File::create(format!("{}", shellexpand::tilde("/tmp/kioka_example.yml"))).unwrap();
-                //file.write_all(out_str.as_bytes()).unwrap();
-
                 let file_path = format!("{}", shellexpand::tilde(file_name));
-                let file = File::open(file_path).unwrap();
-
-                
-                //let mut questions: Vec<Question> = 
-                //    serde_yaml::from_str(before_serialize.as_str()).unwrap();
-
+                let _file = File::open(file_path).unwrap();
                 let mut column = Column::new();
                 column = column.push(button("Use questions")
                                .on_press(Message::QuestionsShuffled(
                     ListOfQuestion {
                         questions: self.checkable_questions.clone(),
-                        current_page: 0,
                     }
                             )));
                 column.into()
@@ -275,9 +208,6 @@ impl Application for MyApplication {
                     }).collect()
 
                     ,));
-                //for opt in opts.to_vec().iter() {
-                //    col = col.push(*opt);
-                //}
 
                 let mut prev_button = button("Prev");
                 if !self.is_first_page() {
@@ -286,7 +216,6 @@ impl Application for MyApplication {
                 }
 
                 let mut next_button = button("Next");
-                dbg!("is last page? {}", self.is_last_page());
                 if !self.is_last_page() {
                     next_button = 
                         next_button.on_press(Message::NextPage);
@@ -307,7 +236,7 @@ impl Application for MyApplication {
                         prev_button.on_press(Message::OpenPage);
                 }
 
-                let mut scoring_button = button("Scoring").
+                let scoring_button = button("Scoring").
                     on_press(Message::Scoring);
 
                 col = col.push(prev_button).push(scoring_button);
@@ -399,17 +328,7 @@ enum OptionMessage {
 }
 
 impl CheckableOptionForSelect {
-    fn update(&mut self, message: OptionMessage) {
-        match message {
-            OptionMessage::Change(checked) => {
-                dbg!("IN OptionMessage");
-                self.checked = checked;
-            }
-        }
-    }
-
-    fn view(&self, i: usize) -> Element<OptionMessage> {
-                dbg!("IN view");
+    fn view(&self, _i: usize) -> Element<OptionMessage> {
         row![checkbox(self.text.clone(), self.checked, OptionMessage::Change)].into()
     }
 
@@ -442,9 +361,6 @@ impl CheckableQuestionsCreator {
 
 fn random_remove_from<T>(from: &mut Vec<T>) -> Option<T> {
     let mut rng = rand::thread_rng();
-    //dbg!("dbg before");
-    //dbg!(from.len());
-    //dbg!("dbg after");
     if from.len() == 0 {
         return None;
     } else {
@@ -467,7 +383,6 @@ fn shuffle<T: std::clone::Clone>(origin: Vec<T>) -> Vec<T> {
 
 
 fn main() -> iced::Result {
-    println!("TEST01");
     MyApplication::run(Settings {
         default_font: Some(include_bytes!("./fonts/ipaexgoth.ttf")),
         ..Settings::default()
