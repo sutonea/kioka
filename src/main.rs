@@ -23,12 +23,12 @@ enum Mode {
 }
 
 #[derive(Debug, Clone)]
-struct UseQuestionsState {
+struct ListOfQuestion {
     questions: Vec<CheckableQuestion>,
     current_page: usize,
 }
 
-impl UseQuestionsState {
+impl ListOfQuestion {
     fn current_question(&self) -> &CheckableQuestion {
         &(self.questions[self.current_page])
     }
@@ -41,15 +41,15 @@ impl UseQuestionsState {
         self.current_page == self.questions.len() - 1
     }
 
-    fn next_page(&self) -> UseQuestionsState {
-        UseQuestionsState {
+    fn next_page(&self) -> ListOfQuestion {
+        ListOfQuestion {
             questions: self.questions.to_vec(),
             current_page: self.current_page + 1,
         }
     }
 
-    fn prev_page(&self) -> UseQuestionsState {
-        UseQuestionsState {
+    fn prev_page(&self) -> ListOfQuestion {
+        ListOfQuestion {
             questions: self.questions.to_vec(),
             current_page: self.current_page - 1,
         }
@@ -95,12 +95,12 @@ impl MyApplication {
 enum Message {
     FindButtonClicked,
     FileSelected(String),
-    QuestionsShuffled(UseQuestionsState),
+    QuestionsShuffled(ListOfQuestion),
     OpenPage,
     NextPage,
     PrevPage,
     Toggled(bool),
-    OptionMessage(usize, OptionMessage)
+    OptionMessage(usize, usize, OptionMessage)
 }
 
 impl Application for MyApplication {
@@ -153,8 +153,10 @@ impl Application for MyApplication {
                 dbg!("Toggled");
                 Command::none()
             },
-            Message::OptionMessage(i, checked) => {
-                dbg!("OptionMessage {}", i);
+            Message::OptionMessage(idx_question, idx_option, checked) => {
+                dbg!("BOOL BEFORE {}", self.checkable_questions[idx_question].options_for_select[idx_option].checked);
+                self.checkable_questions[idx_question].options_for_select[idx_option].checked ^= true;
+                dbg!("BOOL AFTER {}", self.checkable_questions[idx_question].options_for_select[idx_option].checked);
                 Command::none()
             }
 
@@ -225,7 +227,7 @@ impl Application for MyApplication {
                 let mut column = Column::new();
                 column = column.push(button("Use questions")
                                .on_press(Message::QuestionsShuffled(
-                    UseQuestionsState {
+                    ListOfQuestion {
                         questions: self.checkable_questions.clone(),
                         current_page: 0,
                     }
@@ -245,7 +247,7 @@ impl Application for MyApplication {
                     .enumerate()
                     .map(|(i, option)| {
                         option.view(i).map(move |message| {
-                            Message::OptionMessage(i, message)
+                            Message::OptionMessage(self.current_question().idx, i, message)
                         })
                     }).collect()
 
@@ -322,6 +324,7 @@ impl OptionForSelect {
 #[derive(Debug, Clone)]
 struct CheckableQuestion {
     text: String,
+    idx: usize,
     options_for_select: Vec<CheckableOptionForSelect>
 }
 
@@ -358,7 +361,7 @@ struct CheckableQuestionsCreator {}
 impl CheckableQuestionsCreator {
     fn from_questions(questions: Vec<Question>) -> Vec<CheckableQuestion> {
         let mut return_questions: Vec<CheckableQuestion> = vec![];
-        for question in questions.iter() {
+        for (i, question) in questions.iter().enumerate() {
             let mut options: Vec<CheckableOptionForSelect> = vec![];
             for option in question.options_for_select.iter() {
                 options.push(option.to_checkable());
@@ -366,6 +369,7 @@ impl CheckableQuestionsCreator {
             return_questions.push(
                 CheckableQuestion {
                     text: question.text.clone(),
+                    idx: i,
                     options_for_select: options
                 }
                 );
