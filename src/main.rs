@@ -20,6 +20,7 @@ enum Mode {
     FindFile,
     LoadingFile(String),
     UseQuestions,
+    BeforeScoring
 }
 
 #[derive(Debug, Clone)]
@@ -100,7 +101,8 @@ enum Message {
     NextPage,
     PrevPage,
     Toggled(bool),
-    OptionMessage(usize, usize, OptionMessage)
+    OptionMessage(usize, usize, OptionMessage),
+    ToBeforeScoring
 }
 
 impl Application for MyApplication {
@@ -157,6 +159,10 @@ impl Application for MyApplication {
                 dbg!("BOOL BEFORE {}", self.checkable_questions[idx_question].options_for_select[idx_option].checked);
                 self.checkable_questions[idx_question].options_for_select[idx_option].checked ^= true;
                 dbg!("BOOL AFTER {}", self.checkable_questions[idx_question].options_for_select[idx_option].checked);
+                Command::none()
+            },
+            Message::ToBeforeScoring => {
+                self.mode = Mode::BeforeScoring;
                 Command::none()
             }
 
@@ -263,12 +269,30 @@ impl Application for MyApplication {
                 }
 
                 let mut next_button = button("Next");
+                dbg!("is last page? {}", self.is_last_page());
                 if !self.is_last_page() {
                     next_button = 
                         next_button.on_press(Message::NextPage);
+                } else {
+                    next_button = 
+                        next_button.on_press(Message::ToBeforeScoring);
                 }
 
                 col = col.push(prev_button).push(next_button);
+                col.into()
+            },
+            Mode::BeforeScoring => {
+                let mut col = Column::new();
+                col = col.push(Text::new("You have answered all questions."));
+                let mut prev_button = button("Prev");
+                if !self.is_first_page() {
+                    prev_button = 
+                        prev_button.on_press(Message::OpenPage);
+                }
+
+                let mut scoring_button = button("Scoring");
+
+                col = col.push(prev_button).push(scoring_button);
                 col.into()
             }
         }
