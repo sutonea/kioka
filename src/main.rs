@@ -7,7 +7,7 @@ use std::io::prelude::*;
 use rand::Rng;
 
 use iced::executor;
-use iced::widget::{button, checkbox, column, Column, Text, row};
+use iced::widget::{button, checkbox, column, Column, Text, row, Row};
 use std::path::{Path, PathBuf};
 use iced::{
     Application, Command, Element, Settings, Theme,
@@ -63,6 +63,9 @@ impl MyApplication {
         self.num_current_page -= 1;
     }
 
+    fn to_first_page(&mut self) {
+        self.num_current_page = 0;
+    }
 
 }
 
@@ -77,6 +80,7 @@ enum Message {
     OptionMessage(usize, usize, OptionMessage),
     ToBeforeScoring,
     Scoring,
+    OpenFirstPage,
 }
 
 impl Application for MyApplication {
@@ -134,16 +138,22 @@ impl Application for MyApplication {
             Message::Scoring => {
                 let count_of_questions = self.checkable_questions.len();
                 let mut count_of_correct_answer = 0;
-                for question in self.checkable_questions.iter() {
+                for question in self.checkable_questions.iter_mut() {
                     if question.is_correct() {
                         count_of_correct_answer += 1;
                     }
+                    question.change_to_show_answer();
                 }
                 self.finally_score = count_of_correct_answer * 100 / count_of_questions;
                 self.is_scored = true;
                 self.mode = Mode::AfterScoring;
                 Command::none()
             },
+            Message::OpenFirstPage => {
+                self.to_first_page();
+                self.mode = Mode::UseQuestions;
+                Command::none()
+            }
 
         }
     }
@@ -245,6 +255,9 @@ impl Application for MyApplication {
             Mode::AfterScoring => {
                 let mut col = Column::new();
                 col = col.push(Text::new(format!("Your score: {} %", self.finally_score)));
+                col = col.push(
+                      button("Back to Questions").on_press(Message::OpenFirstPage)
+                    );
                 col.into()
             }
         }
@@ -292,6 +305,7 @@ impl OptionForSelect {
             text: self.text.clone(),
             truthy: self.truthy,
             checked: false,
+            show_answer: false,
         }
 
     }
@@ -313,6 +327,12 @@ impl CheckableQuestion {
         }
         true
     }
+
+    fn change_to_show_answer(&mut self) {
+        for opt in self.options_for_select.iter_mut() {
+            opt.change_to_show_answer();
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -320,6 +340,7 @@ struct CheckableOptionForSelect {
     text: String,
     truthy: bool,
     checked: bool,
+    show_answer: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -329,11 +350,24 @@ enum OptionMessage {
 
 impl CheckableOptionForSelect {
     fn view(&self, _i: usize) -> Element<OptionMessage> {
-        row![checkbox(self.text.clone(), self.checked, OptionMessage::Change)].into()
+        if self.show_answer {
+            Row::new()
+                .push(Text::new(
+                        format!(" {}", if self.truthy == self.checked { "[OK]" } else { "[NG]" })
+                        ))
+                .push(checkbox(self.text.clone(), self.checked, OptionMessage::Change))
+                .into()
+        } else {
+            row![checkbox(self.text.clone(), self.checked, OptionMessage::Change)].into()
+        }
     }
 
     fn is_correct(&self) -> bool {
         self.truthy == self.checked
+    }
+
+    fn change_to_show_answer(&mut self) {
+        self.show_answer = true;
     }
 }
 
