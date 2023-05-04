@@ -241,7 +241,7 @@ impl Application for MyApplication {
                     }
                 }
 
-                col = col.push(Row::new().push(prev_button).push(next_button));
+                col = col.push(Row::new().push(Row::new().push(prev_button).padding(10)).push(Row::new().push(next_button).padding(10)));
                 col.into()
             },
             Mode::BeforeScoring => {
@@ -256,18 +256,18 @@ impl Application for MyApplication {
                 let scoring_button = button("Scoring").
                     on_press(Message::Scoring);
 
-                col = col.push(Row::new().push(prev_button).push(scoring_button));
+                col = col.push(Column::new().push(prev_button.padding(10)).padding(10)).push(Column::new().push(scoring_button.padding(10)).padding(10));
                 col.into()
             },
             Mode::AfterScoring => {
                 let mut col = Column::new();
                 col = col.push(Text::new(format!("Your score: {} %", self.finally_score)));
                 col = col.push(
-                      button("Last Question").on_press(Message::OpenPage)
+                      Column::new().padding(20).push(button("Last Question").padding(10).on_press(Message::OpenPage))
                     );
 
                 col = col.push(
-                      button("First Question").on_press(Message::OpenFirstPage)
+                      Column::new().padding(20).push(button("First Question").padding(10).on_press(Message::OpenFirstPage))
                     );
                 col.into()
             }
