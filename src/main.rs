@@ -211,6 +211,13 @@ impl Application for MyApplication {
                     }).collect()
 
                     ,));
+                if self.is_scored {
+                    col = col.push(
+                        Column::new().push(
+                            Text::new(self.current_question().explanation.clone())
+                            ).padding(20)
+                        );
+                }
 
                 let mut prev_button = button("Prev");
                 if !self.is_first_page() {
@@ -289,6 +296,7 @@ impl QuestionsCreator {
 struct Question {
     text: String,
     options_for_select: Vec<OptionForSelect>,
+    explanation: String,
 }
 
 impl Question {
@@ -319,7 +327,8 @@ impl OptionForSelect {
 struct CheckableQuestion {
     text: String,
     idx: usize,
-    options_for_select: Vec<CheckableOptionForSelect>
+    options_for_select: Vec<CheckableOptionForSelect>,
+    explanation: String,
 }
 
 impl CheckableQuestion {
@@ -399,7 +408,8 @@ impl CheckableQuestionsCreator {
                 CheckableQuestion {
                     text: question.text.clone(),
                     idx: i,
-                    options_for_select: options
+                    options_for_select: options,
+                    explanation: question.explanation.clone(),
                 }
                 );
         }
