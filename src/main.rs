@@ -16,7 +16,6 @@ use iced::{
 
 #[derive(Debug, Clone)]
 enum Mode {
-    Initial,
     FindFile,
     LoadingFile(String),
     UseQuestions,
@@ -30,7 +29,7 @@ struct ListOfQuestion {
 }
 
 impl Default for Mode {
-    fn default() -> Self { Self::Initial }
+    fn default() -> Self { Self::FindFile }
 }
 
 #[derive(Default)]
@@ -71,7 +70,6 @@ impl MyApplication {
 
 #[derive(Debug, Clone)]
 enum Message {
-    FindButtonClicked,
     FileSelected(String),
     QuestionsShuffled(ListOfQuestion),
     OpenPage,
@@ -99,10 +97,6 @@ impl Application for MyApplication {
 
     fn update(&mut self, message: Message) -> Command<Self::Message> {
         match message {
-            Message::FindButtonClicked => {
-                self.mode = Mode::FindFile;
-                Command::none()
-            },
             Message::FileSelected(file_name) => {
                 self.mode = Mode::LoadingFile(file_name.clone());
                 let file = File::open(file_name.clone()).unwrap();
@@ -160,11 +154,6 @@ impl Application for MyApplication {
 
     fn view(&self) -> Element<Message> {
         match &self.mode {
-            Mode::Initial => {
-                let button = button("Find file").on_press(Message::FindButtonClicked);
-                let column = Column::new().push(button);
-                column.into()
-            },
             Mode::FindFile => {
 
                 let path_to_dir: PathBuf = Path::new(
@@ -182,7 +171,7 @@ impl Application for MyApplication {
                             .on_press(Message::FileSelected(
                                     entry.path().as_path().to_string_lossy().to_string()  
                                                              ));
-                        col = col.push(button);
+                        col = col.push(Column::new().push(button.padding(8)).padding([10, 10, 10, 20]));
 
                     }
                 }
@@ -192,18 +181,20 @@ impl Application for MyApplication {
                 let file_path = format!("{}", shellexpand::tilde(file_name));
                 let _file = File::open(file_path).unwrap();
                 let mut column = Column::new();
-                column = column.push(button("Use questions")
+                column = column.padding(20).push(button("Start").padding(10)
                                .on_press(Message::QuestionsShuffled(
                     ListOfQuestion {
                         questions: self.checkable_questions.clone(),
                     }
-                            )));
+                            )).padding(20));
                 column.into()
             },
             Mode::UseQuestions => {
                 let mut col = Column::new();
                 col = col.push(
-                    Text::new(self.current_question().text.as_str())
+                    Column::new().push(
+                        Text::new(self.current_question().text.as_str())
+                    ).padding(20)
                     );
 
 
@@ -234,7 +225,7 @@ impl Application for MyApplication {
                         next_button.on_press(Message::ToBeforeScoring);
                 }
 
-                col = col.push(prev_button).push(next_button);
+                col = col.push(Row::new().push(prev_button).push(next_button));
                 col.into()
             },
             Mode::BeforeScoring => {
@@ -249,7 +240,7 @@ impl Application for MyApplication {
                 let scoring_button = button("Scoring").
                     on_press(Message::Scoring);
 
-                col = col.push(prev_button).push(scoring_button);
+                col = col.push(Row::new().push(prev_button).push(scoring_button));
                 col.into()
             },
             Mode::AfterScoring => {
@@ -353,12 +344,22 @@ impl CheckableOptionForSelect {
         if self.show_answer {
             Row::new()
                 .push(Text::new(
-                        format!(" {}", if self.truthy == self.checked { "[OK]" } else { "[NG]" })
+                        format!(" {}", if self.truthy == self.checked { "OK" } else { "NG" })
                         ))
-                .push(checkbox(self.text.clone(), self.checked, OptionMessage::Change))
+                .push(
+                    checkbox(
+                        self.text.clone(), self.checked, OptionMessage::Change
+                        )
+                    ).padding([10, 10, 10, 20])
                 .into()
         } else {
-            row![checkbox(self.text.clone(), self.checked, OptionMessage::Change)].into()
+            Row::new()
+                .push(
+                    checkbox(
+                        self.text.clone(), self.checked, OptionMessage::Change
+                        )
+                    ).padding([10, 10, 30, 20])
+                .into()
         }
     }
 
