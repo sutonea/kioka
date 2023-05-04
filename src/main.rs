@@ -7,7 +7,7 @@ use std::io::prelude::*;
 use rand::Rng;
 
 use iced::executor;
-use iced::widget::{button, checkbox, column, Column, Text, row, Row};
+use iced::widget::{button, checkbox, column, Column, Text, Row};
 use std::path::{Path, PathBuf};
 use iced::{
     Application, Command, Element, Settings, Theme,
@@ -122,7 +122,9 @@ impl Application for MyApplication {
                 Command::none()
             },
             Message::OptionMessage(idx_question, idx_option, _checked) => {
-                self.checkable_questions[idx_question].options_for_select[idx_option].checked ^= true;
+                if !self.is_scored {
+                    self.checkable_questions[idx_question].options_for_select[idx_option].checked ^= true;
+                }
                 Command::none()
             },
             Message::ToBeforeScoring => {
@@ -221,8 +223,15 @@ impl Application for MyApplication {
                     next_button = 
                         next_button.on_press(Message::NextPage);
                 } else {
+                    if self.is_scored {
+
+                    next_button = 
+                        next_button.on_press(Message::Scoring);
+
+                    } else {
                     next_button = 
                         next_button.on_press(Message::ToBeforeScoring);
+                    }
                 }
 
                 col = col.push(Row::new().push(prev_button).push(next_button));
@@ -247,7 +256,11 @@ impl Application for MyApplication {
                 let mut col = Column::new();
                 col = col.push(Text::new(format!("Your score: {} %", self.finally_score)));
                 col = col.push(
-                      button("Back to Questions").on_press(Message::OpenFirstPage)
+                      button("Last Question").on_press(Message::OpenPage)
+                    );
+
+                col = col.push(
+                      button("First Question").on_press(Message::OpenFirstPage)
                     );
                 col.into()
             }
