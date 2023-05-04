@@ -7,7 +7,7 @@ use std::io::prelude::*;
 use rand::Rng;
 
 use iced::executor;
-use iced::widget::{button, checkbox, column, Column, Text, row, Row};
+use iced::widget::{button, checkbox, column, Column, Text, Row};
 use std::path::{Path, PathBuf};
 use iced::{
     Application, Command, Element, Settings, Theme,
