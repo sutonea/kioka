@@ -39,6 +39,7 @@ struct MyApplication {
     num_current_page: usize,
     is_scored: bool,
     finally_score: usize,
+    locale: Locale,
 }
 
 impl MyApplication {
@@ -183,7 +184,9 @@ impl Application for MyApplication {
                 let file_path = format!("{}", shellexpand::tilde(file_name));
                 let _file = File::open(file_path).unwrap();
                 let mut column = Column::new();
-                column = column.padding(20).push(button("Start").padding(10)
+                column = column.padding(20).push(button(
+                        t("スタート", "Start", self.locale)
+                        ).padding(10)
                                .on_press(Message::QuestionsShuffled(
                     ListOfQuestion {
                         questions: self.checkable_questions.clone(),
@@ -219,13 +222,17 @@ impl Application for MyApplication {
                         );
                 }
 
-                let mut prev_button = button("Prev");
+                let mut prev_button = button(
+                    t("前の問題へ", "Prev question", self.locale)
+                    );
                 if !self.is_first_page() {
                     prev_button = 
                         prev_button.on_press(Message::PrevPage);
                 }
 
-                let mut next_button = button("Next");
+                let mut next_button = button(
+                    t("次の問題へ", "Next question", self.locale)
+                    );
                 if !self.is_last_page() {
                     next_button = 
                         next_button.on_press(Message::NextPage);
@@ -246,14 +253,20 @@ impl Application for MyApplication {
             },
             Mode::BeforeScoring => {
                 let mut col = Column::new();
-                col = col.push(Text::new("You have answered all questions."));
-                let mut prev_button = button("Prev");
+                col = col.push(Text::new(
+                    t("すべての問題に回答しました", "You have answered all questions.", self.locale)
+                        ));
+                let mut prev_button = button(
+                    t("前の問題へ", "Prev question", self.locale)
+                    );
                 if !self.is_first_page() {
                     prev_button = 
                         prev_button.on_press(Message::OpenPage);
                 }
 
-                let scoring_button = button("Scoring").
+                let scoring_button = button(
+                    t("採点する", "Scoring", self.locale)
+                    ).
                     on_press(Message::Scoring);
 
                 col = col.push(Column::new().push(prev_button.padding(10)).padding(10)).push(Column::new().push(scoring_button.padding(10)).padding(10));
@@ -261,13 +274,23 @@ impl Application for MyApplication {
             },
             Mode::AfterScoring => {
                 let mut col = Column::new();
-                col = col.push(Text::new(format!("Your score: {} %", self.finally_score)));
+                col = col.push(Text::new(
+                    t(
+                        format!("正答率 {} ％", self.finally_score).as_str(),
+                        format!("Scoring {} %", self.finally_score).as_str(),
+                        self.locale
+                        ).to_owned()
+                    ));
                 col = col.push(
-                      Column::new().padding(20).push(button("Last Question").padding(10).on_press(Message::OpenPage))
+                      Column::new().padding(20).push(button(
+                    t("最後の問題を確認する", "Last Question", self.locale)
+                              ).padding(10).on_press(Message::OpenPage))
                     );
 
                 col = col.push(
-                      Column::new().padding(20).push(button("First Question").padding(10).on_press(Message::OpenFirstPage))
+                      Column::new().padding(20).push(button(
+                    t("最初の問題を確認する", "First Question", self.locale)
+                              ).padding(10).on_press(Message::OpenFirstPage))
                     );
                 col.into()
             }
@@ -445,4 +468,18 @@ fn main() -> iced::Result {
         default_font: Some(include_bytes!("./fonts/ipaexgoth.ttf")),
         ..Settings::default()
     })
+}
+
+#[derive(Default, Debug, Clone, Copy)]
+enum Locale {
+    #[default]
+    Ja,
+    En,
+}
+
+fn t<'a>(ja: &'a str, en: &'a str, locale: Locale) -> &'a str {
+    match locale {
+        Locale::Ja => { ja },
+        Locale::En => { en },
+    }
 }
