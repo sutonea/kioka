@@ -168,9 +168,13 @@ impl Application for MyApplication {
                     );
                 for entry in path_to_dir.read_dir().expect("read_dir call failed") {
                     if let Ok(entry) = entry {
+                        let questions = QuestionsCreator::create_from_file(
+                            File::open(entry.path().as_path()).unwrap()
+                            );
+                        let count = questions.len();
                         let button = button(Text::new(
-                                entry.path().as_path().to_string_lossy().to_string() 
-                                                      ) )
+                                format!("{:?}(問題数:{})",entry.path().file_name().unwrap(), count)
+                                                      ))
                             .on_press(Message::FileSelected(
                                     entry.path().as_path().to_string_lossy().to_string()  
                                                              ));
