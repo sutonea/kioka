@@ -7,7 +7,8 @@ use std::io::prelude::*;
 use rand::Rng;
 
 use iced::executor;
-use iced::widget::{button, checkbox, column, Column, Text, Row};
+
+use iced::widget::{button, checkbox, column, Column, Text, TextInput, Row};
 use std::path::{Path, PathBuf};
 use iced::{
     Application, Command, Element, Settings, Theme,
@@ -40,6 +41,8 @@ struct MyApplication {
     is_scored: bool,
     finally_score: usize,
     locale: Locale,
+    questions_count: String,
+    selected_questions_count: usize,
 }
 
 impl MyApplication {
@@ -80,6 +83,7 @@ enum Message {
     ToBeforeScoring,
     Scoring,
     OpenFirstPage,
+    ChangeQuestionCount(String),
 }
 
 impl Application for MyApplication {
@@ -103,11 +107,14 @@ impl Application for MyApplication {
                 let file = File::open(file_name.clone()).unwrap();
                 let questions: Vec<Question> = QuestionsCreator::create_from_file(file);
                 self.checkable_questions = CheckableQuestionsCreator::from_questions(questions);
+                self.selected_questions_count = self.checkable_questions.len();
+                self.questions_count = self.selected_questions_count.to_string();
                 Command::none()
             },
             Message::QuestionsShuffled(use_questions_state) => {
                 self.mode = Mode::UseQuestions;
-                self.checkable_questions = use_questions_state.questions;
+                self.checkable_questions = 
+                    use_questions_state.questions[0..self.questions_count.parse::<usize>().unwrap()].to_vec();
                 Command::none()
             },
             Message::OpenPage => {
@@ -150,6 +157,22 @@ impl Application for MyApplication {
                 self.to_first_page();
                 self.mode = Mode::UseQuestions;
                 Command::none()
+            },
+            Message::ChangeQuestionCount(new_questions_count) => {
+                let num = new_questions_count.parse::<usize>();
+                match num {
+                    Ok(count) => {
+                        if self.selected_questions_count >= count || 0 > count {
+                            self.questions_count = new_questions_count;
+                        }
+                    },
+                    Err(_) => {
+                        if new_questions_count == "" {
+                            self.questions_count = "".to_string();
+                        }
+                    }
+                } 
+                Command::none()
             }
 
         }
@@ -188,7 +211,15 @@ impl Application for MyApplication {
                 let file_path = format!("{}", shellexpand::tilde(file_name));
                 let _file = File::open(file_path).unwrap();
                 let mut column = Column::new();
-                column = column.padding(20).push(button(
+                column = column.padding(20)
+                    .push(Text::new(
+                            t("挑戦したい問題の数を入力してください",
+                              "Input number of questions to try",
+                              self.locale)
+
+                            ))
+                    .push(TextInput::new(t("問題数", "Questions count", self.locale), self.questions_count.as_str()).on_input(Message::ChangeQuestionCount))
+                    .push(button(
                         t("スタート", "Start", self.locale)
                         ).padding(10)
                                .on_press(Message::QuestionsShuffled(
