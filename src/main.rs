@@ -19,7 +19,7 @@ use iced::{
 enum Mode {
     FindFile,
     LoadingFile(String),
-    UseQuestions,
+    UseQuestions(bool),
     BeforeScoring,
     AfterScoring,
 }
@@ -79,6 +79,7 @@ enum Message {
     OpenPage,
     NextPage,
     PrevPage,
+    ShowExplanation,
     OptionMessage(usize, usize, OptionMessage),
     ToBeforeScoring,
     Scoring,
@@ -112,23 +113,29 @@ impl Application for MyApplication {
                 Command::none()
             },
             Message::QuestionsShuffled(use_questions_state) => {
-                self.mode = Mode::UseQuestions;
+                self.mode = Mode::UseQuestions(false);
                 self.checkable_questions = 
                     use_questions_state.questions[0..self.questions_count.parse::<usize>().unwrap()].to_vec();
                 Command::none()
             },
             Message::OpenPage => {
-                self.mode = Mode::UseQuestions;
+                self.mode = Mode::UseQuestions(false);
                 Command::none()
             },
             Message::NextPage => {
+                self.mode = Mode::UseQuestions(false);
                 self.next_page();
                 Command::none()
             },
             Message::PrevPage => {
+                self.mode = Mode::UseQuestions(false);
                 self.prev_page();
                 Command::none()
             },
+            Message::ShowExplanation => {
+                self.mode = Mode::UseQuestions(true);
+                Command::none()
+            }
             Message::OptionMessage(idx_question, idx_option, _checked) => {
                 if !self.is_scored {
                     self.checkable_questions[idx_question].options_for_select[idx_option].checked ^= true;
@@ -155,7 +162,7 @@ impl Application for MyApplication {
             },
             Message::OpenFirstPage => {
                 self.to_first_page();
-                self.mode = Mode::UseQuestions;
+                self.mode = Mode::UseQuestions(false);
                 Command::none()
             },
             Message::ChangeQuestionCount(new_questions_count) => {
@@ -229,7 +236,7 @@ impl Application for MyApplication {
                             )).padding(20));
                 column.into()
             },
-            Mode::UseQuestions => {
+            Mode::UseQuestions(show_explanation) => {
                 let mut col = Column::new();
                 col = col.push(
                     Column::new().push(
@@ -249,7 +256,7 @@ impl Application for MyApplication {
                     }).collect()
 
                     ,));
-                if self.is_scored {
+                if self.is_scored || *show_explanation {
                     col = col.push(
                         Column::new().push(
                             Text::new(self.current_question().explanation.clone())
@@ -284,6 +291,15 @@ impl Application for MyApplication {
                 }
 
                 col = col.push(Row::new().push(Row::new().push(prev_button).padding(10)).push(Row::new().push(next_button).padding(10)));
+                let mut btn_show_exp = button(
+                        t("解説を見る", "Show explanation", self.locale)
+                        );
+                if !show_explanation && !self.is_scored {
+                    btn_show_exp = btn_show_exp.on_press(Message::ShowExplanation);
+                }
+                col = col.push(
+                    Row::new().padding(10).push(btn_show_exp)
+                    );
                 col.into()
             },
             Mode::BeforeScoring => {
