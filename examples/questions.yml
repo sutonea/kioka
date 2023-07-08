@@ -1,12 +1,29 @@
-- text: Sample question 1
+- text: 哺乳類はどれ？
+  explanation: 犬と猫は哺乳類です。鳩は鳥類、蛙は両生類です。
   options_for_select:
-  - text: A
+  - text: 犬
     truthy: true
-  - text: B
+  - text: 猫
+    truthy: true
+  - text: 鳩
     truthy: false
-- text: Sample question 2
+  - text: 蛙
+    truthy: false
+- text: 昭和の次は？
+  explanation: 大正の次は昭和です。その次が平成で、次が令和です。
   options_for_select:
-  - text: X
+  - text: 平成
     truthy: true
-  - text: Y
+  - text: 大正
+    truthy: false
+  - text: 令和
+    truthy: false
+- text: タコの足は何本？
+  explanation: タコの足は8本です。
+  options_for_select:
+  - text: 10本
+    truthy: false
+  - text: 8本
+    truthy: true
+  - text: 6本
     truthy: false
