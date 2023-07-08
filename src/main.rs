@@ -1,6 +1,7 @@
 extern crate rand;
 use serde::{Serialize, Deserialize};
 use std::fs::File;
+use std::fs;
 
 use std::io::prelude::*;
 
@@ -196,7 +197,10 @@ impl Application for MyApplication {
                 col = col.push(
                     Text::new(path_to_dir.as_path().to_string_lossy().to_string())
                     );
+                let _result_create_dir = fs::create_dir(path_to_dir.as_path());
+                let mut entries_count: usize = 0;
                 for entry in path_to_dir.read_dir().expect("read_dir call failed") {
+                    entries_count += 1;
                     if let Ok(entry) = entry {
                         let questions = QuestionsCreator::create_from_file(
                             File::open(entry.path().as_path()).unwrap()
@@ -211,6 +215,13 @@ impl Application for MyApplication {
                         col = col.push(Column::new().push(button.padding(8)).padding([10, 10, 10, 20]));
 
                     }
+                }
+                if entries_count == 0 {
+                    col = col.push(
+                            Text::new(
+                                "ファイルが存在しません。問題ファイルを上記フォルダへ追加後、アプリケーションを起動し直してください。"
+                                )
+                        );
                 }
                 col.into()
             },
